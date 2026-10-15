@@ -1,13 +1,36 @@
 "use client";
 
 import { FirebaseError } from "firebase/app";
-import { addDoc, collection, serverTimestamp } from "firebase/firestore";
+import {
+  collection,
+  doc,
+  serverTimestamp,
+  writeBatch,
+} from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useState } from "react";
 
 import { NavigationLinks } from "@/shared/navigation-links";
 import { auth, db } from "@/lib/firebase";
-import { signupClosesAtForDate } from "@/lib/opportunities";
+import { signupClosesAtForEventStart } from "@/lib/opportunities";
+
+import {
+  MAX_REPEAT_WEEKS,
+  occurrenceDates,
+  repeatUntilForWeeks,
+  type RepeatFrequency,
+} from "./recurrence";
+import { RepeatFields } from "./repeat-fields";
+
+function dateTimeToInputValue(date: Date | null) {
+  if (!date) {
+    return "";
+  }
+
+  const pad = (value: number) => String(value).padStart(2, "0");
+
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
 
 function opportunityErrorMessage(error: unknown) {
   if (error instanceof FirebaseError && error.code === "permission-denied") {
@@ -26,6 +49,10 @@ export function CreateOpportunityForm() {
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
   const [capacity, setCapacity] = useState("");
+  const [frequency, setFrequency] = useState<RepeatFrequency>("none");
+  const [repeatWeeks, setRepeatWeeks] = useState("");
+  const [signupClosesAt, setSignupClosesAt] = useState("");
+  const [hasCustomSignupClose, setHasCustomSignupClose] = useState(false);
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -50,10 +77,37 @@ export function CreateOpportunityForm() {
       return;
     }
 
-    const signupClosesAt = signupClosesAtForDate(date);
+    const parsedSignupClosesAt = new Date(signupClosesAt);
+    const eventStart = new Date(`${date}T${startTime}`);
 
-    if (!signupClosesAt) {
-      setError("Choose a valid date.");
+    if (!signupClosesAt || Number.isNaN(parsedSignupClosesAt.getTime())) {
+      setError("Choose when signups close.");
+      return;
+    }
+
+    if (parsedSignupClosesAt <= new Date()) {
+      setError("Signup cutoff must be in the future.");
+      return;
+    }
+
+    if (
+      Number.isNaN(eventStart.getTime()) ||
+      parsedSignupClosesAt >= eventStart
+    ) {
+      setError("Signup cutoff must be before the event starts.");
+      return;
+    }
+
+    const dates = occurrenceDates(
+      date,
+      frequency,
+      repeatUntilForWeeks(date, Number(repeatWeeks)),
+    );
+
+    if (!dates) {
+      setError(
+        `Enter a whole number of weeks to repeat, from 1 to ${MAX_REPEAT_WEEKS}.`,
+      );
       return;
     }
 
@@ -67,22 +121,48 @@ export function CreateOpportunityForm() {
         return;
       }
 
-      const opportunity = await addDoc(collection(db, "opportunities"), {
-        title: trimmedTitle,
-        description: description.trim(),
-        location: location.trim(),
-        startTime,
-        endTime,
-        date,
-        capacity: parseInt(capacity) || null,
-        wrapUpSummary: "",
-        videoUrl: "",
-        createdBy: user.uid,
-        createdAt: serverTimestamp(),
-        signupClosesAt,
+      // Each repeat closes signups the same amount of time before it starts.
+      const closeBeforeStartMs =
+        eventStart.getTime() - parsedSignupClosesAt.getTime();
+      const batch = writeBatch(db);
+      const seriesId =
+        dates.length > 1 ? doc(collection(db, "opportunities")).id : null;
+      const eventRefs = dates.map((eventDate, index) => {
+        const eventRef = doc(collection(db, "opportunities"));
+
+        batch.set(eventRef, {
+          title: trimmedTitle,
+          description: description.trim(),
+          location: location.trim(),
+          startTime,
+          endTime,
+          date: eventDate,
+          capacity: parseInt(capacity) || null,
+          wrapUpSummary: "",
+          videoUrl: "",
+          createdBy: user.uid,
+          createdAt: serverTimestamp(),
+          signupClosesAt: new Date(
+            new Date(`${eventDate}T${startTime}`).getTime() -
+              closeBeforeStartMs,
+          ),
+          ...(seriesId
+            ? {
+                seriesId,
+                repeatFrequency: frequency,
+                repeatWeeks: Number(repeatWeeks),
+                seriesPosition: index + 1,
+                seriesCount: dates.length,
+              }
+            : {}),
+        });
+
+        return eventRef;
       });
 
-      router.push(`/staff/events/${opportunity.id}`);
+      await batch.commit();
+
+      router.push(`/staff/events/${eventRefs[0].id}`);
     } catch (caughtError) {
       setError(opportunityErrorMessage(caughtError));
     } finally {
@@ -133,7 +213,17 @@ export function CreateOpportunityForm() {
                   step="60"
                   type="time"
                   value={startTime}
-                  onChange={(event) => setStartTime(event.target.value)}
+                  onChange={(event) => {
+                    const selectedTime = event.target.value;
+                    setStartTime(selectedTime);
+                    if (!hasCustomSignupClose) {
+                      setSignupClosesAt(
+                        dateTimeToInputValue(
+                          signupClosesAtForEventStart(date, selectedTime),
+                        ),
+                      );
+                    }
+                  }}
                   required
                 />
               </label>
@@ -159,7 +249,17 @@ export function CreateOpportunityForm() {
                 className="mt-1 block h-11 w-full rounded-md border border-zinc-300 px-3 text-base outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
                 type="date"
                 value={date}
-                onChange={(event) => setDate(event.target.value)}
+                onChange={(event) => {
+                  const selectedDate = event.target.value;
+                  setDate(selectedDate);
+                  if (!hasCustomSignupClose) {
+                    setSignupClosesAt(
+                      dateTimeToInputValue(
+                        signupClosesAtForEventStart(selectedDate, startTime),
+                      ),
+                    );
+                  }
+                }}
                 required
               />
             </label>
@@ -176,6 +276,13 @@ export function CreateOpportunityForm() {
             </label>
             </div>
 
+            <RepeatFields
+              frequency={frequency}
+              repeatWeeks={repeatWeeks}
+              onFrequencyChange={setFrequency}
+              onRepeatWeeksChange={setRepeatWeeks}
+            />
+
             <label className="block text-sm font-medium">
               Description
               <textarea
@@ -185,14 +292,30 @@ export function CreateOpportunityForm() {
               />
             </label>
 
-            <label className="block text-sm font-medium">
-              Location
-              <input
-                className="mt-1 block h-11 w-full rounded-md border border-zinc-300 px-3 text-base outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
-                value={location}
-                onChange={(event) => setLocation(event.target.value)}
-              />
-            </label>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="block text-sm font-medium">
+                Location
+                <input
+                  className="mt-1 block h-11 w-full rounded-md border border-zinc-300 px-3 text-base outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                  value={location}
+                  onChange={(event) => setLocation(event.target.value)}
+                />
+              </label>
+
+              <label className="block text-sm font-medium">
+                Signup closes at
+                <input
+                  className="mt-1 block h-11 w-full rounded-md border border-zinc-300 px-3 text-base outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                  type="datetime-local"
+                  value={signupClosesAt}
+                  onChange={(event) => {
+                    setSignupClosesAt(event.target.value);
+                    setHasCustomSignupClose(true);
+                  }}
+                  required
+                />
+              </label>
+            </div>
           </div>
 
           {error ? (

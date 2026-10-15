@@ -1,5 +1,11 @@
 import { initializeApp, getApp, getApps } from "firebase/app";
-import { connectAuthEmulator, getAuth } from "firebase/auth";
+import {
+  browserLocalPersistence,
+  browserPopupRedirectResolver,
+  connectAuthEmulator,
+  getAuth,
+  initializeAuth,
+} from "firebase/auth";
 import { connectFirestoreEmulator, getFirestore } from "firebase/firestore";
 
 const usingEmulators = process.env.NEXT_PUBLIC_USE_EMULATORS === "true";
@@ -21,7 +27,9 @@ if (!process.env.NEXT_PUBLIC_FIREBASE_API_KEY && !usingEmulators && typeof windo
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || (usingEmulators ? "demo-api-key" : "missing-api-key"),
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  // Google/Microsoft popup sign-in refuses to start without an authDomain, even
+  // on the emulator (which ignores the value), so give it a placeholder there.
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || (usingEmulators ? "localhost" : undefined),
   projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ?? (usingEmulators ? "volunteering-39547" : undefined),
   storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
   messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
@@ -30,7 +38,26 @@ const firebaseConfig = {
 
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 
-export const auth = getAuth(app);
+// localStorage instead of getAuth's default IndexedDB: IndexedDB refuses to save
+// the user ("Database is closing/hidden") when the popup opens as a tab and hides
+// this page, which broke Google/Microsoft sign-in. initializeAuth throws if
+// called twice (hot reload), so fall back to getAuth.
+function createAuth() {
+  if (typeof window === "undefined") {
+    return getAuth(app);
+  }
+
+  try {
+    return initializeAuth(app, {
+      persistence: browserLocalPersistence,
+      popupRedirectResolver: browserPopupRedirectResolver,
+    });
+  } catch {
+    return getAuth(app);
+  }
+}
+
+export const auth = createAuth();
 export const db = getFirestore(app);
 
 if (usingEmulators) {
