@@ -52,7 +52,8 @@ const providers: {
   Logo: ComponentType;
 }[] = [
   { id: "google", label: "Google", Logo: GoogleLogo },
-  { id: "microsoft", label: "Microsoft", Logo: MicrosoftLogo },
+  // ponytail: Microsoft hidden until it's set up in Firebase + Azure; re-add this line to turn it on.
+  // { id: "microsoft", label: "Microsoft", Logo: MicrosoftLogo },
 ];
 
 // "Continue with Google / Microsoft" buttons. A first-time user gets a student

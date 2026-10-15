@@ -1,5 +1,11 @@
 import { initializeApp, getApp, getApps } from "firebase/app";
-import { connectAuthEmulator, getAuth } from "firebase/auth";
+import {
+  browserLocalPersistence,
+  browserPopupRedirectResolver,
+  connectAuthEmulator,
+  getAuth,
+  initializeAuth,
+} from "firebase/auth";
 import { connectFirestoreEmulator, getFirestore } from "firebase/firestore";
 
 const usingEmulators = process.env.NEXT_PUBLIC_USE_EMULATORS === "true";
@@ -32,7 +38,26 @@ const firebaseConfig = {
 
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 
-export const auth = getAuth(app);
+// localStorage instead of getAuth's default IndexedDB: IndexedDB refuses to save
+// the user ("Database is closing/hidden") when the popup opens as a tab and hides
+// this page, which broke Google/Microsoft sign-in. initializeAuth throws if
+// called twice (hot reload), so fall back to getAuth.
+function createAuth() {
+  if (typeof window === "undefined") {
+    return getAuth(app);
+  }
+
+  try {
+    return initializeAuth(app, {
+      persistence: browserLocalPersistence,
+      popupRedirectResolver: browserPopupRedirectResolver,
+    });
+  } catch {
+    return getAuth(app);
+  }
+}
+
+export const auth = createAuth();
 export const db = getFirestore(app);
 
 if (usingEmulators) {
