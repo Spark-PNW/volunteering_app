@@ -11,7 +11,7 @@ export function DashboardHeader({
   return (
     <div className="mb-6 flex flex-col gap-4 border-b border-zinc-200 pb-5 sm:flex-row sm:items-center sm:justify-between">
       <div>
-        <p className="text-sm font-medium text-blue-700">Spark Volunteering</p>
+        <p className="text-sm font-medium text-blue-700">Spark Serve</p>
         <h1 className="mt-1 text-2xl font-semibold">Dashboard</h1>
       </div>
 
