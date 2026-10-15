@@ -18,6 +18,7 @@ import {
   ActiveEventCard,
   PastEventCard,
 } from "@/features/student-experience/student-event-cards";
+import { StudentEventTabs } from "@/features/student-experience/student-event-tabs";
 import { StudentEventModal } from "@/features/student-experience/student-event-modal";
 import { VolunteeringStats } from "@/features/student-experience/volunteering-stats";
 import { db } from "@/lib/firebase";
@@ -304,12 +305,15 @@ export function StudentOpportunitiesList({
   const signedUpOpportunities = opportunities.filter((opportunity) =>
     signupStatusByOpportunityId.has(opportunity.id),
   );
+  const upcomingSignedUpOpportunities = signedUpOpportunities.filter(
+    (opportunity) => !isOpportunityPast(opportunity.date, todayDateKey),
+  );
   const activeOpportunities = opportunities.filter(
     (opportunity) => !isOpportunityPast(opportunity.date, todayDateKey),
   );
-  const pastOpportunities = opportunities.filter((opportunity) =>
+  const pastOpportunities = signedUpOpportunities.filter((opportunity) =>
     isOpportunityPast(opportunity.date, todayDateKey),
-  );
+  ).reverse();
 
   const totalHours = signedUpOpportunities.reduce(
     (sum, opportunity) => sum + (opportunity.hours ?? 0),
@@ -322,8 +326,6 @@ export function StudentOpportunitiesList({
         eventsJoined={signedUpOpportunities.length}
         totalHours={totalHours}
       />
-
-      <h2 className="mt-8 text-lg font-semibold">Available Events</h2>
 
       {error ? (
         <p
@@ -344,61 +346,99 @@ export function StudentOpportunitiesList({
         <p className="mt-4 text-sm text-zinc-600">Loading events...</p>
       ) : null}
 
-      {!isLoading && activeOpportunities.length === 0 ? (
-        <p className="mt-4 text-sm text-zinc-600">
-          No available events right now.
-        </p>
-      ) : null}
+      <StudentEventTabs
+        availableCount={activeOpportunities.length}
+        available={
+          <>
+            {!isLoading && activeOpportunities.length === 0 ? (
+              <p className="mt-4 text-sm text-zinc-600">
+                No available events right now.
+              </p>
+            ) : null}
 
-      <div className="mt-4 space-y-3">
-        {activeOpportunities.map((opportunity) => {
-          const signupStatus = signupStatusByOpportunityId.get(opportunity.id);
+            <div className="mt-4 space-y-3">
+              {activeOpportunities.map((opportunity) => {
+                const signupStatus = signupStatusByOpportunityId.get(
+                  opportunity.id,
+                );
 
-          return (
-            <ActiveEventCard
-              isRemoving={removingOpportunityId === opportunity.id}
-              isSignedUp={Boolean(signupStatus)}
-              isSubmitting={submittingOpportunityId === opportunity.id}
-              isUpcoming={isOpportunityUpcoming(opportunity.date, todayDateKey)}
-              key={opportunity.id}
-              onOpenDetails={() => setSelectedOpportunityId(opportunity.id)}
-              onToggleSignup={() =>
-                toggleSignup(opportunity, Boolean(signupStatus))
-              }
-              opportunity={opportunity}
-              signupStage={signupStageFor(
-                signupStatus,
-                opportunity.date,
-                todayDateKey,
-              )}
-            />
-          );
-        })}
-      </div>
-
-      <h2 className="mt-8 text-lg font-semibold">Past Events</h2>
-
-      {!isLoading && pastOpportunities.length === 0 ? (
-        <p className="mt-4 rounded-lg border border-zinc-200 bg-zinc-50 p-4 text-sm text-zinc-600">
-          No past events yet.
-        </p>
-      ) : null}
-
-      <div className="mt-4 space-y-3">
-        {pastOpportunities.map((opportunity) => (
-          <PastEventCard
-            isSignedUp={signupStatusByOpportunityId.has(opportunity.id)}
-            key={opportunity.id}
-            onOpenDetails={() => setSelectedOpportunityId(opportunity.id)}
-            opportunity={opportunity}
-            signupStage={signupStageFor(
-              signupStatusByOpportunityId.get(opportunity.id),
-              opportunity.date,
-              todayDateKey,
-            )}
-          />
-        ))}
-      </div>
+                return (
+                  <ActiveEventCard
+                    isRemoving={removingOpportunityId === opportunity.id}
+                    isSignedUp={Boolean(signupStatus)}
+                    isSubmitting={submittingOpportunityId === opportunity.id}
+                    isUpcoming={isOpportunityUpcoming(
+                      opportunity.date,
+                      todayDateKey,
+                    )}
+                    key={opportunity.id}
+                    onOpenDetails={() => setSelectedOpportunityId(opportunity.id)}
+                    onToggleSignup={() =>
+                      toggleSignup(opportunity, Boolean(signupStatus))
+                    }
+                    opportunity={opportunity}
+                    signupStage={signupStageFor(
+                      signupStatus,
+                      opportunity.date,
+                      todayDateKey,
+                    )}
+                  />
+                );
+              })}
+            </div>
+          </>
+        }
+        upcomingCount={upcomingSignedUpOpportunities.length}
+        completedCount={pastOpportunities.length}
+        upcoming={
+          <>
+            {!isLoading && upcomingSignedUpOpportunities.length === 0 ? (
+              <p className="text-sm text-zinc-600">You haven’t signed up for any upcoming events yet.</p>
+            ) : null}
+            {upcomingSignedUpOpportunities.map((opportunity) => (
+              <ActiveEventCard
+                isRemoving={removingOpportunityId === opportunity.id}
+                isSignedUp
+                isSubmitting={submittingOpportunityId === opportunity.id}
+                isUpcoming={isOpportunityUpcoming(
+                  opportunity.date,
+                  todayDateKey,
+                )}
+                key={opportunity.id}
+                onOpenDetails={() => setSelectedOpportunityId(opportunity.id)}
+                onToggleSignup={() => toggleSignup(opportunity, true)}
+                opportunity={opportunity}
+                signupStage={signupStageFor(
+                  signupStatusByOpportunityId.get(opportunity.id),
+                  opportunity.date,
+                  todayDateKey,
+                )}
+              />
+            ))}
+          </>
+        }
+        completed={
+          <>
+            <p className="text-sm text-zinc-600">Events you signed up for whose dates have passed.</p>
+            {!isLoading && pastOpportunities.length === 0 ? (
+              <p className="text-sm text-zinc-600">No completed events yet.</p>
+            ) : null}
+            {pastOpportunities.map((opportunity) => (
+              <PastEventCard
+                isSignedUp
+                key={opportunity.id}
+                onOpenDetails={() => setSelectedOpportunityId(opportunity.id)}
+                opportunity={opportunity}
+                signupStage={signupStageFor(
+                  signupStatusByOpportunityId.get(opportunity.id),
+                  opportunity.date,
+                  todayDateKey,
+                )}
+              />
+            ))}
+          </>
+        }
+      />
 
       {selectedOpportunity ? (
         <StudentEventModal
