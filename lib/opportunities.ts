@@ -7,6 +7,7 @@ export type Opportunity = {
   location: string;
   hours: number | null;
   date: string;
+  startTime?: string;
   wrapUpSummary: string;
   videoUrl: string;
   createdBy: string;
@@ -23,6 +24,7 @@ export function opportunityFromData(
     location: typeof data.location === "string" ? data.location : "",
     hours: typeof data.hours === "number" ? data.hours : null,
     date: typeof data.date === "string" ? data.date : "",
+    startTime: typeof data.startTime === "string" ? data.startTime : "",
     wrapUpSummary:
       typeof data.wrapUpSummary === "string" ? data.wrapUpSummary : "",
     videoUrl: typeof data.videoUrl === "string" ? data.videoUrl : "",
@@ -116,14 +118,34 @@ export function isOpportunityUpcoming(
   );
 }
 
-export function signupClosesAtForDate(date: string) {
-  const [year, month, day] = date.split("-").map(Number);
+export function signupClosesAtForEventStart(date: string, startTime: string) {
+  const dateMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
+  const timeMatch = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(startTime);
 
-  if (!year || !month || !day) {
+  if (!dateMatch || !timeMatch) {
     return null;
   }
 
-  return new Date(year, month - 1, day + 1);
+  const year = Number(dateMatch[1]);
+  const month = Number(dateMatch[2]);
+  const day = Number(dateMatch[3]);
+  const eventStart = new Date(
+    year,
+    month - 1,
+    day,
+    Number(timeMatch[1]),
+    Number(timeMatch[2]),
+  );
+
+  if (
+    eventStart.getFullYear() !== year ||
+    eventStart.getMonth() !== month - 1 ||
+    eventStart.getDate() !== day
+  ) {
+    return null;
+  }
+
+  return new Date(eventStart.getTime() - 60_000);
 }
 
 export function formatHours(hours: number | null) {
