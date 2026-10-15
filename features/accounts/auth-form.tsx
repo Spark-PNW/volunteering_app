@@ -52,9 +52,11 @@ export function AuthForm({ mode }: AuthFormProps) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");  // confirmPassword is only checked on signup; it never reaches the network.
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -67,6 +69,14 @@ export function AuthForm({ mode }: AuthFormProps) {
 
       if (isSignup && !trimmedName) {
         setError("Enter your name.");
+        return;
+      }
+
+      // Client-side equality check — catches typos before any Firebase call.
+      // Because there is no password-reset flow yet, a silent mismatch would
+      // lock the user out of their own account permanently.
+      if (isSignup && password !== confirmPassword) {
+        setError("Passwords do not match. Please re-enter.");
         return;
       }
 
@@ -134,6 +144,7 @@ export function AuthForm({ mode }: AuthFormProps) {
               required
             />
           </label>
+
           <label className="block text-sm font-medium">
             Password
             <div className="relative mt-1">
@@ -156,6 +167,38 @@ export function AuthForm({ mode }: AuthFormProps) {
               </button>
             </div>
           </label>
+
+          {/* Confirm Password — signup only. autoComplete="off" prevents a
+              password manager from silently pre-filling this field to match
+              the first, which would defeat the purpose of the typo check. */}
+          {isSignup ? (
+            <label className="block text-sm font-medium">
+              Confirm Password
+              <div className="relative mt-1">
+                <input
+                  className="block h-11 w-full rounded-md border border-zinc-300 px-3 pr-10 text-base outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                  autoComplete="off"
+                  minLength={6}
+                  type={showConfirmPassword ? "text" : "password"}
+                  value={confirmPassword}
+                  onChange={(event) => setConfirmPassword(event.target.value)}
+                  required
+                />
+                <button
+                  type="button"
+                  className="absolute inset-y-0 right-3 flex items-center text-zinc-500 hover:text-zinc-800"
+                  onClick={() => setShowConfirmPassword((prev) => !prev)}
+                  aria-label={
+                    showConfirmPassword
+                      ? "Hide confirm password"
+                      : "Show confirm password"
+                  }
+                >
+                  {showConfirmPassword ? "Hide" : "Show"}
+                </button>
+              </div>
+            </label>
+          ) : null}
 
           {error ? (
             <p
