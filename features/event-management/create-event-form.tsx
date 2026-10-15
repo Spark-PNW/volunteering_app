@@ -17,6 +17,16 @@ function opportunityErrorMessage(error: unknown) {
   return "Could not create the event. Please try again.";
 }
 
+function dateTimeToInputValue(date: Date | null) {
+  if (!date) {
+    return "";
+  }
+
+  const pad = (value: number) => String(value).padStart(2, "0");
+
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
 export function CreateOpportunityForm() {
   const router = useRouter();
   const [title, setTitle] = useState("");
@@ -26,6 +36,7 @@ export function CreateOpportunityForm() {
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
   const [capacity, setCapacity] = useState("");
+  const [signupClosesAt, setSignupClosesAt] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -50,10 +61,10 @@ export function CreateOpportunityForm() {
       return;
     }
 
-    const signupClosesAt = signupClosesAtForDate(date);
+    const parsedSignupClosesAt = new Date(signupClosesAt);
 
-    if (!signupClosesAt) {
-      setError("Choose a valid date.");
+    if (!signupClosesAt || Number.isNaN(parsedSignupClosesAt.getTime())) {
+      setError("Choose when signups close.");
       return;
     }
 
@@ -79,7 +90,7 @@ export function CreateOpportunityForm() {
         videoUrl: "",
         createdBy: user.uid,
         createdAt: serverTimestamp(),
-        signupClosesAt,
+        signupClosesAt: parsedSignupClosesAt,
       });
 
       router.push(`/staff/events/${opportunity.id}`);
@@ -159,7 +170,15 @@ export function CreateOpportunityForm() {
                 className="mt-1 block h-11 w-full rounded-md border border-zinc-300 px-3 text-base outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
                 type="date"
                 value={date}
-                onChange={(event) => setDate(event.target.value)}
+                onChange={(event) => {
+                  const selectedDate = event.target.value;
+                  setDate(selectedDate);
+                  setSignupClosesAt(
+                    dateTimeToInputValue(
+                      signupClosesAtForDate(selectedDate),
+                    ),
+                  );
+                }}
                 required
               />
             </label>
@@ -185,14 +204,27 @@ export function CreateOpportunityForm() {
               />
             </label>
 
-            <label className="block text-sm font-medium">
-              Location
-              <input
-                className="mt-1 block h-11 w-full rounded-md border border-zinc-300 px-3 text-base outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
-                value={location}
-                onChange={(event) => setLocation(event.target.value)}
-              />
-            </label>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="block text-sm font-medium">
+                Location
+                <input
+                  className="mt-1 block h-11 w-full rounded-md border border-zinc-300 px-3 text-base outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                  value={location}
+                  onChange={(event) => setLocation(event.target.value)}
+                />
+              </label>
+
+              <label className="block text-sm font-medium">
+                Signup closes at
+                <input
+                  className="mt-1 block h-11 w-full rounded-md border border-zinc-300 px-3 text-base outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                  type="datetime-local"
+                  value={signupClosesAt}
+                  onChange={(event) => setSignupClosesAt(event.target.value)}
+                  required
+                />
+              </label>
+            </div>
           </div>
 
           {error ? (
