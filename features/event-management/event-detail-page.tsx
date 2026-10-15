@@ -5,6 +5,7 @@ import { doc, getDoc } from "firebase/firestore";
 import { useCallback, useEffect, useState } from "react";
 
 import { EventDetailsSection } from "@/features/event-management/event-details-section";
+import { DeleteEventButton } from "@/features/staff-experience/delete-event-button";
 import { EventNotesSection } from "@/features/staff-experience/event-notes-section";
 import { OpportunityQrCode } from "@/features/staff-experience/opportunity-qr-code";
 import { EventRoster } from "@/features/student-experience/event-roster";
@@ -151,6 +152,7 @@ export function OpportunityDetail({ opportunityId }: OpportunityDetailProps) {
               onSaved={applyChanges}
               opportunity={opportunity}
             />
+            <DeleteEventButton opportunityId={opportunity.id} title={opportunity.title} />
           </div>
 
           <OpportunityQrCode
