@@ -311,16 +311,32 @@ export function StudentOpportunitiesList({
     isOpportunityPast(opportunity.date, todayDateKey),
   );
 
-  const totalHours = signedUpOpportunities.reduce(
-    (sum, opportunity) => sum + (opportunity.hours ?? 0),
-    0,
-  );
+  // Hours are earned, not promised: they count once the signup reaches
+  // "completed", so signing up for something far off adds nothing yet. Anything
+  // short of that is "pending" so the student can still see it registered.
+  const isCompleted = (opportunity: Opportunity) =>
+    signupStageFor(
+      signupStatusByOpportunityId.get(opportunity.id),
+      opportunity.date,
+      todayDateKey,
+    ) === "completed";
+
+  const sumHours = (sum: number, opportunity: Opportunity) =>
+    sum + (opportunity.hours ?? 0);
+
+  const totalHours = signedUpOpportunities
+    .filter(isCompleted)
+    .reduce(sumHours, 0);
+  const pendingHours = signedUpOpportunities
+    .filter((opportunity) => !isCompleted(opportunity))
+    .reduce(sumHours, 0);
 
   return (
     <section className="mt-6 rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">
       <VolunteeringStats
         eventsJoined={signedUpOpportunities.length}
         totalHours={totalHours}
+        pendingHours={pendingHours}
       />
 
       <h2 className="mt-8 text-lg font-semibold">Available Events</h2>
