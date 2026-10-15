@@ -1,6 +1,3 @@
-// Filename: forgot-password-form.tsx
-// Author: Kevin K. Seng
-// Date: 06/01/2025
 // Description: Form component that sends a Firebase password-reset email.
 //              Rendered by app/forgot-password/page.tsx.
 
