@@ -315,7 +315,7 @@ export function StudentOpportunitiesList({
     isOpportunityPast(opportunity.date, todayDateKey),
   ).reverse();
 
-  const totalHours = signedUpOpportunities.reduce(
+  const totalHours = pastOpportunities.reduce(
     (sum, opportunity) => sum + (opportunity.hours ?? 0),
     0,
   );

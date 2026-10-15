@@ -7,7 +7,7 @@ import { type FormEvent, useState } from "react";
 
 import { NavigationLinks } from "@/shared/navigation-links";
 import { auth, db } from "@/lib/firebase";
-import { signupClosesAtForEventStart } from "@/lib/opportunities";
+import { calculateHours, formatHours, signupClosesAtForEventStart } from "@/lib/opportunities";
 
 function dateTimeToInputValue(date: Date | null) {
   if (!date) {
@@ -93,12 +93,15 @@ export function CreateOpportunityForm() {
         return;
       }
 
+      const hours = calculateHours(startTime, endTime);
+
       const opportunity = await addDoc(collection(db, "opportunities"), {
         title: trimmedTitle,
         description: description.trim(),
         location: location.trim(),
         startTime,
         endTime,
+        hours,
         date,
         capacity: parseInt(capacity) || null,
         wrapUpSummary: "",
@@ -187,7 +190,16 @@ export function CreateOpportunityForm() {
                 />
               </label>
             </div>
-            
+
+            {startTime && endTime && startTime < endTime ? (
+              <p className="text-sm text-zinc-500">
+                Duration:{" "}
+                <span className="font-medium text-zinc-800">
+                  {formatHours(calculateHours(startTime, endTime))}
+                </span>
+              </p>
+            ) : null}
+
             <div className="grid gap-4 sm:grid-cols-2">
             <label className="block text-sm font-medium">
               Date
