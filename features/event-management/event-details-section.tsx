@@ -8,7 +8,7 @@ import { db } from "@/lib/firebase";
 import {
   formatHours,
   formatOpportunityDate,
-  signupClosesAtForDate,
+  signupClosesAtForEventStart,
   type Opportunity,
 } from "@/lib/opportunities";
 
@@ -91,10 +91,13 @@ export function EventDetailsSection({
       return;
     }
 
-    const signupClosesAt = signupClosesAtForDate(editDate);
+    const signupClosesAt = signupClosesAtForEventStart(
+      editDate,
+      opportunity.startTime ?? "",
+    );
 
     if (!signupClosesAt) {
-      setDetailsError("Choose a valid date.");
+      setDetailsError("Choose a valid event date and start time.");
       return;
     }
 

@@ -7,7 +7,17 @@ import { type FormEvent, useState } from "react";
 
 import { NavigationLinks } from "@/shared/navigation-links";
 import { auth, db } from "@/lib/firebase";
-import { signupClosesAtForDate } from "@/lib/opportunities";
+import { signupClosesAtForEventStart } from "@/lib/opportunities";
+
+function dateTimeToInputValue(date: Date | null) {
+  if (!date) {
+    return "";
+  }
+
+  const pad = (value: number) => String(value).padStart(2, "0");
+
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
 
 function opportunityErrorMessage(error: unknown) {
   if (error instanceof FirebaseError && error.code === "permission-denied") {
@@ -26,6 +36,8 @@ export function CreateOpportunityForm() {
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
   const [capacity, setCapacity] = useState("");
+  const [signupClosesAt, setSignupClosesAt] = useState("");
+  const [hasCustomSignupClose, setHasCustomSignupClose] = useState(false);
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -50,10 +62,24 @@ export function CreateOpportunityForm() {
       return;
     }
 
-    const signupClosesAt = signupClosesAtForDate(date);
+    const parsedSignupClosesAt = new Date(signupClosesAt);
+    const eventStart = new Date(`${date}T${startTime}`);
 
-    if (!signupClosesAt) {
-      setError("Choose a valid date.");
+    if (!signupClosesAt || Number.isNaN(parsedSignupClosesAt.getTime())) {
+      setError("Choose when signups close.");
+      return;
+    }
+
+    if (parsedSignupClosesAt <= new Date()) {
+      setError("Signup cutoff must be in the future.");
+      return;
+    }
+
+    if (
+      Number.isNaN(eventStart.getTime()) ||
+      parsedSignupClosesAt >= eventStart
+    ) {
+      setError("Signup cutoff must be before the event starts.");
       return;
     }
 
@@ -79,7 +105,7 @@ export function CreateOpportunityForm() {
         videoUrl: "",
         createdBy: user.uid,
         createdAt: serverTimestamp(),
-        signupClosesAt,
+        signupClosesAt: parsedSignupClosesAt,
       });
 
       router.push(`/staff/events/${opportunity.id}`);
@@ -133,7 +159,17 @@ export function CreateOpportunityForm() {
                   step="60"
                   type="time"
                   value={startTime}
-                  onChange={(event) => setStartTime(event.target.value)}
+                  onChange={(event) => {
+                    const selectedTime = event.target.value;
+                    setStartTime(selectedTime);
+                    if (!hasCustomSignupClose) {
+                      setSignupClosesAt(
+                        dateTimeToInputValue(
+                          signupClosesAtForEventStart(date, selectedTime),
+                        ),
+                      );
+                    }
+                  }}
                   required
                 />
               </label>
@@ -159,7 +195,17 @@ export function CreateOpportunityForm() {
                 className="mt-1 block h-11 w-full rounded-md border border-zinc-300 px-3 text-base outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
                 type="date"
                 value={date}
-                onChange={(event) => setDate(event.target.value)}
+                onChange={(event) => {
+                  const selectedDate = event.target.value;
+                  setDate(selectedDate);
+                  if (!hasCustomSignupClose) {
+                    setSignupClosesAt(
+                      dateTimeToInputValue(
+                        signupClosesAtForEventStart(selectedDate, startTime),
+                      ),
+                    );
+                  }
+                }}
                 required
               />
             </label>
@@ -185,14 +231,30 @@ export function CreateOpportunityForm() {
               />
             </label>
 
-            <label className="block text-sm font-medium">
-              Location
-              <input
-                className="mt-1 block h-11 w-full rounded-md border border-zinc-300 px-3 text-base outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
-                value={location}
-                onChange={(event) => setLocation(event.target.value)}
-              />
-            </label>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="block text-sm font-medium">
+                Location
+                <input
+                  className="mt-1 block h-11 w-full rounded-md border border-zinc-300 px-3 text-base outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                  value={location}
+                  onChange={(event) => setLocation(event.target.value)}
+                />
+              </label>
+
+              <label className="block text-sm font-medium">
+                Signup closes at
+                <input
+                  className="mt-1 block h-11 w-full rounded-md border border-zinc-300 px-3 text-base outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                  type="datetime-local"
+                  value={signupClosesAt}
+                  onChange={(event) => {
+                    setSignupClosesAt(event.target.value);
+                    setHasCustomSignupClose(true);
+                  }}
+                  required
+                />
+              </label>
+            </div>
           </div>
 
           {error ? (
