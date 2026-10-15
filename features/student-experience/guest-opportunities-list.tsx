@@ -126,10 +126,12 @@ export function GuestOpportunitiesList() {
             isRemoving={false}
             isSignedUp={false}
             isSubmitting={false}
+            isUpcoming={false}
             key={opportunity.id}
             onOpenDetails={() => setSelectedOpportunityId(opportunity.id)}
             onToggleSignup={() => setGuestSignupOpportunity(opportunity)}
             opportunity={opportunity}
+            signupStage="not_signed_up"
           />
         ))}
       </div>
@@ -149,6 +151,7 @@ export function GuestOpportunitiesList() {
             key={opportunity.id}
             onOpenDetails={() => setSelectedOpportunityId(opportunity.id)}
             opportunity={opportunity}
+            signupStage="not_signed_up"
           />
         ))}
       </div>
