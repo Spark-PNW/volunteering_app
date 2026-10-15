@@ -11,6 +11,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useState } from "react";
 
+import { ThirdPartyLoginButtons } from "@/features/accounts/third-party-login-buttons";
 import { auth, db } from "@/lib/firebase";
 
 type AuthMode = "login" | "signup";
@@ -199,6 +200,18 @@ export function AuthForm({ mode }: AuthFormProps) {
               </div>
             </label>
           ) : null}
+          
+          {/* "Forgot password?" is only relevant on the login form */}
+          {!isSignup ? (
+            <div className="text-right">
+              <Link
+                className="text-sm font-medium text-blue-700 hover:text-blue-800"
+                href="/forgot-password"
+              >
+                Forgot password?
+              </Link>
+            </div>
+          ) : null}
 
           {error ? (
             <p
@@ -221,6 +234,8 @@ export function AuthForm({ mode }: AuthFormProps) {
                 : "Log in"}
           </button>
         </form>
+
+        <ThirdPartyLoginButtons onSignedIn={() => router.replace("/dashboard")} />
 
         <p className="mt-5 text-center text-sm text-zinc-600">
           {isSignup ? "Already have an account?" : "Need an account?"}{" "}

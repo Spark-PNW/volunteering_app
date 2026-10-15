@@ -5,7 +5,7 @@ import { collection, getDocs } from "firebase/firestore";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-import { StaffEventGrid } from "@/features/staff-experience/staff-event-grid";
+import { StaffEventTabs } from "@/features/staff-experience/staff-event-tabs";
 import { db } from "@/lib/firebase";
 import {
   getLocalDateKey,
@@ -142,39 +142,12 @@ export function StaffOpportunitiesList({
         <p className="text-sm text-zinc-600">Loading events...</p>
       ) : null}
 
-      {!isLoading && opportunities.length === 0 ? (
-        <div className="rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">
-          <p className="text-sm text-zinc-600">No events yet.</p>
-        </div>
-      ) : null}
-
-      {!isLoading && opportunities.length > 0 ? (
-        <>
-          <h3 className="mb-3 text-base font-semibold">Available Events</h3>
-          {activeOpportunities.length === 0 ? (
-            <p className="mb-6 rounded-lg border border-zinc-200 bg-white p-5 text-sm text-zinc-600 shadow-sm">
-              No available events right now.
-            </p>
-          ) : (
-            <StaffEventGrid
-              isNotesMode={isNotesMode}
-              opportunities={activeOpportunities}
-            />
-          )}
-
-          <h3 className="mb-3 mt-8 text-base font-semibold">Past Events</h3>
-          {pastOpportunities.length === 0 ? (
-            <p className="rounded-lg border border-zinc-200 bg-white p-5 text-sm text-zinc-600 shadow-sm">
-              No past events yet.
-            </p>
-          ) : (
-            <StaffEventGrid
-              isNotesMode={isNotesMode}
-              opportunities={pastOpportunities}
-            />
-          )}
-        </>
-      ) : null}
+      <StaffEventTabs
+        available={activeOpportunities}
+        past={pastOpportunities}
+        isLoading={isLoading}
+        isNotesMode={isNotesMode}
+      />
     </section>
   );
 
