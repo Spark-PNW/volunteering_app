@@ -48,6 +48,11 @@ export function Dashboard({ initialEventId = "" }: DashboardProps) {
         return;
       }
 
+      if (!user.emailVerified) {
+        router.replace("/verify-email");
+        return;
+      }
+
       setCurrentUser(user);
 
       try {
