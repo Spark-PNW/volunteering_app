@@ -1,6 +1,7 @@
 "use client";
 
 import { FirebaseError } from "firebase/app";
+import { onAuthStateChanged } from "firebase/auth";
 import { collection, getDocs } from "firebase/firestore";
 import { useEffect, useState } from "react";
 
@@ -10,7 +11,7 @@ import {
   PastEventCard,
 } from "@/features/student-experience/student-event-cards";
 import { StudentEventModal } from "@/features/student-experience/student-event-modal";
-import { db } from "@/lib/firebase";
+import { auth, db } from "@/lib/firebase";
 import {
   getLocalDateKey,
   isOpportunityPast,
@@ -19,11 +20,13 @@ import {
   type Opportunity,
 } from "@/lib/opportunities";
 
-// The public events page for guests (not signed in). Shows all events; when a
-// guest presses "Sign up" the GuestSignupModal collects their name and email.
+// The public events page. Shows all events for anyone — signed in or not.
+// Signed-in users are NOT redirected; they can browse freely without being
+// pushed to /dashboard.
 export function GuestOpportunitiesList() {
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSignedIn, setIsSignedIn] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [todayDateKey] = useState(getLocalDateKey);
@@ -36,9 +39,15 @@ export function GuestOpportunitiesList() {
     : null;
 
   useEffect(() => {
+    return onAuthStateChanged(auth, (user) => {
+      setIsSignedIn(Boolean(user));
+    });
+  }, []);
+
+  useEffect(() => {
     let isMounted = true;
 
-    async function loadOpportunities() {
+    async function load() {
       try {
         const snapshot = await getDocs(collection(db, "opportunities"));
         const loaded = sortOpportunitiesByDate(
@@ -52,7 +61,7 @@ export function GuestOpportunitiesList() {
             caughtError.code === "permission-denied"
           ) {
             setError(
-              "Events are not publicly visible yet. Sign in to browse events, or ask a maintainer to allow guest reads in the Firestore rules.",
+              "Events are not publicly visible yet. Sign in to browse events.",
             );
           } else {
             setError("Could not load events. Please refresh and try again.");
@@ -63,7 +72,8 @@ export function GuestOpportunitiesList() {
       }
     }
 
-    loadOpportunities();
+    load();
+
     return () => {
       isMounted = false;
     };
@@ -89,11 +99,13 @@ export function GuestOpportunitiesList() {
 
   return (
     <section className="mt-6 rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">
-      {/* "Sign in to see" stats banner */}
-      <div className="rounded-md border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-500">
-        <span className="font-medium text-zinc-700">Your stats: </span>
-        Sign in to see your volunteering hours and events joined.
-      </div>
+      {/* "Sign in to see" stats banner — hidden once the user is signed in */}
+      {!isSignedIn ? (
+        <div className="rounded-md border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-500">
+          <span className="font-medium text-zinc-700">Your stats: </span>
+          Sign in to see your volunteering hours and events joined.
+        </div>
+      ) : null}
 
       <h2 className="mt-8 text-lg font-semibold">Available Events</h2>
 

@@ -2,6 +2,7 @@
 
 import { FirebaseError } from "firebase/app";
 import { onAuthStateChanged, signOut, type User } from "firebase/auth";
+import { broadcastSignOut } from "@/lib/auth-channel";
 import { doc, getDoc } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -62,8 +63,9 @@ export function Dashboard({ initialEventId = "" }: DashboardProps) {
 
   async function handleSignOut() {
     setIsSigningOut(true);
+    broadcastSignOut();
     await signOut(auth);
-    router.replace("/login");
+    router.replace("/");
   }
 
   if (isLoading) {

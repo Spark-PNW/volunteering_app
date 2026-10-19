@@ -6,26 +6,38 @@ type StudentEventTabsProps = {
   availableCount: number;
   available: ReactNode;
   upcomingCount: number;
-  completedCount: number;
   upcoming: ReactNode;
-  completed: ReactNode;
+  myCompletedCount: number;
+  myCompleted: ReactNode;
+  pastCount: number;
+  past: ReactNode;
 };
 
 export function StudentEventTabs({
   availableCount,
   available,
   upcomingCount,
-  completedCount,
   upcoming,
-  completed,
+  myCompletedCount,
+  myCompleted,
+  pastCount,
+  past,
 }: StudentEventTabsProps) {
   const [activeTab, setActiveTab] = useState("available");
   const id = useId();
   const tabs = [
     { key: "available", label: "Available Events", count: availableCount },
     { key: "upcoming", label: "Upcoming Events", count: upcomingCount },
-    { key: "completed", label: "Completed Events", count: completedCount },
+    { key: "myCompleted", label: "Completed Events", count: myCompletedCount },
+    { key: "past", label: "Past Events", count: pastCount },
   ];
+
+  function contentFor(key: string) {
+    if (key === "available") return available;
+    if (key === "upcoming") return upcoming;
+    if (key === "myCompleted") return myCompleted;
+    return past;
+  }
 
   return (
     <div className="mt-8">
@@ -72,7 +84,7 @@ export function StudentEventTabs({
           role="tabpanel"
           tabIndex={0}
         >
-          {tab.key === "available" ? available : tab.key === "upcoming" ? upcoming : completed}
+          {contentFor(tab.key)}
         </div>
       ))}
     </div>
