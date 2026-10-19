@@ -1,6 +1,5 @@
 "use client";
 
-import { FirebaseError } from "firebase/app";
 import { onAuthStateChanged } from "firebase/auth";
 import { collection, getDocs } from "firebase/firestore";
 import { useEffect, useState } from "react";
@@ -56,16 +55,7 @@ export function GuestOpportunitiesList() {
         if (isMounted) setOpportunities(loaded);
       } catch (caughtError) {
         if (isMounted) {
-          if (
-            caughtError instanceof FirebaseError &&
-            caughtError.code === "permission-denied"
-          ) {
-            setError(
-              "Events are not publicly visible yet. Sign in to browse events.",
-            );
-          } else {
-            setError("Could not load events. Please refresh and try again.");
-          }
+          setError("Could not load events. Please refresh and try again.");
         }
       } finally {
         if (isMounted) setIsLoading(false);

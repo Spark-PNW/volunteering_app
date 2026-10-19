@@ -205,8 +205,7 @@ service cloud.firestore {
 
     // 3: events. Staff do everything; everyone else only bumps the capacity counter.
     match /opportunities/{opportunityId} {
-      allow get: if true;
-      allow list: if isSignedIn();
+      allow get, list: if true;
 
       allow create, update, delete: if isStaff();
 
