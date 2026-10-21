@@ -311,7 +311,10 @@ export function StudentOpportunitiesList({
   const activeOpportunities = opportunities.filter(
     (opportunity) => !isOpportunityPast(opportunity.date, todayDateKey),
   );
-  const pastOpportunities = signedUpOpportunities.filter((opportunity) =>
+  const completedOpportunities = signedUpOpportunities.filter((opportunity) =>
+    isOpportunityPast(opportunity.date, todayDateKey),
+  ).reverse();
+  const pastOpportunities = opportunities.filter((opportunity) =>
     isOpportunityPast(opportunity.date, todayDateKey),
   ).reverse();
 
@@ -389,7 +392,6 @@ export function StudentOpportunitiesList({
           </>
         }
         upcomingCount={upcomingSignedUpOpportunities.length}
-        completedCount={pastOpportunities.length}
         upcoming={
           <>
             {!isLoading && upcomingSignedUpOpportunities.length === 0 ? (
@@ -417,15 +419,36 @@ export function StudentOpportunitiesList({
             ))}
           </>
         }
-        completed={
+        myCompletedCount={completedOpportunities.length}
+        myCompleted={
           <>
-            <p className="text-sm text-zinc-600">Events you signed up for whose dates have passed.</p>
-            {!isLoading && pastOpportunities.length === 0 ? (
+            {!isLoading && completedOpportunities.length === 0 ? (
               <p className="text-sm text-zinc-600">No completed events yet.</p>
+            ) : null}
+            {completedOpportunities.map((opportunity) => (
+              <PastEventCard
+                isSignedUp
+                key={opportunity.id}
+                onOpenDetails={() => setSelectedOpportunityId(opportunity.id)}
+                opportunity={opportunity}
+                signupStage={signupStageFor(
+                  signupStatusByOpportunityId.get(opportunity.id),
+                  opportunity.date,
+                  todayDateKey,
+                )}
+              />
+            ))}
+          </>
+        }
+        pastCount={pastOpportunities.length}
+        past={
+          <>
+            {!isLoading && pastOpportunities.length === 0 ? (
+              <p className="text-sm text-zinc-600">No past events yet.</p>
             ) : null}
             {pastOpportunities.map((opportunity) => (
               <PastEventCard
-                isSignedUp
+                isSignedUp={signupStatusByOpportunityId.has(opportunity.id)}
                 key={opportunity.id}
                 onOpenDetails={() => setSelectedOpportunityId(opportunity.id)}
                 opportunity={opportunity}
