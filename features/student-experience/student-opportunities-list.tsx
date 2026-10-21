@@ -311,20 +311,39 @@ export function StudentOpportunitiesList({
   const activeOpportunities = opportunities.filter(
     (opportunity) => !isOpportunityPast(opportunity.date, todayDateKey),
   );
-  const pastOpportunities = signedUpOpportunities.filter((opportunity) =>
+  const completedOpportunities = signedUpOpportunities.filter((opportunity) =>
+    isOpportunityPast(opportunity.date, todayDateKey),
+  ).reverse();
+  const pastOpportunities = opportunities.filter((opportunity) =>
     isOpportunityPast(opportunity.date, todayDateKey),
   ).reverse();
 
-  const totalHours = signedUpOpportunities.reduce(
-    (sum, opportunity) => sum + (opportunity.hours ?? 0),
-    0,
-  );
+  // Hours are earned, not promised: they count once the signup reaches
+  // "completed", so signing up for something far off adds nothing yet. Anything
+  // short of that is "pending" so the student can still see it registered.
+  const isCompleted = (opportunity: Opportunity) =>
+    signupStageFor(
+      signupStatusByOpportunityId.get(opportunity.id),
+      opportunity.date,
+      todayDateKey,
+    ) === "completed";
+
+  const sumHours = (sum: number, opportunity: Opportunity) =>
+    sum + (opportunity.hours ?? 0);
+
+  const totalHours = signedUpOpportunities
+    .filter(isCompleted)
+    .reduce(sumHours, 0);
+  const pendingHours = signedUpOpportunities
+    .filter((opportunity) => !isCompleted(opportunity))
+    .reduce(sumHours, 0);
 
   return (
     <section className="mt-6 rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">
       <VolunteeringStats
         eventsJoined={signedUpOpportunities.length}
         totalHours={totalHours}
+        pendingHours={pendingHours}
       />
 
       {error ? (
@@ -389,7 +408,6 @@ export function StudentOpportunitiesList({
           </>
         }
         upcomingCount={upcomingSignedUpOpportunities.length}
-        completedCount={pastOpportunities.length}
         upcoming={
           <>
             {!isLoading && upcomingSignedUpOpportunities.length === 0 ? (
@@ -417,15 +435,36 @@ export function StudentOpportunitiesList({
             ))}
           </>
         }
-        completed={
+        myCompletedCount={completedOpportunities.length}
+        myCompleted={
           <>
-            <p className="text-sm text-zinc-600">Events you signed up for whose dates have passed.</p>
-            {!isLoading && pastOpportunities.length === 0 ? (
+            {!isLoading && completedOpportunities.length === 0 ? (
               <p className="text-sm text-zinc-600">No completed events yet.</p>
+            ) : null}
+            {completedOpportunities.map((opportunity) => (
+              <PastEventCard
+                isSignedUp
+                key={opportunity.id}
+                onOpenDetails={() => setSelectedOpportunityId(opportunity.id)}
+                opportunity={opportunity}
+                signupStage={signupStageFor(
+                  signupStatusByOpportunityId.get(opportunity.id),
+                  opportunity.date,
+                  todayDateKey,
+                )}
+              />
+            ))}
+          </>
+        }
+        pastCount={pastOpportunities.length}
+        past={
+          <>
+            {!isLoading && pastOpportunities.length === 0 ? (
+              <p className="text-sm text-zinc-600">No past events yet.</p>
             ) : null}
             {pastOpportunities.map((opportunity) => (
               <PastEventCard
-                isSignedUp
+                isSignedUp={signupStatusByOpportunityId.has(opportunity.id)}
                 key={opportunity.id}
                 onOpenDetails={() => setSelectedOpportunityId(opportunity.id)}
                 opportunity={opportunity}

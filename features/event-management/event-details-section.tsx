@@ -8,9 +8,11 @@ import { db } from "@/lib/firebase";
 import {
   formatHours,
   formatOpportunityDate,
-  signupClosesAtForDate,
+  signupClosesAtForEventStart,
   type Opportunity,
 } from "@/lib/opportunities";
+
+import { describeSeries } from "./recurrence";
 
 type EventDetailsSectionProps = {
   opportunity: Opportunity;
@@ -91,10 +93,13 @@ export function EventDetailsSection({
       return;
     }
 
-    const signupClosesAt = signupClosesAtForDate(editDate);
+    const signupClosesAt = signupClosesAtForEventStart(
+      editDate,
+      opportunity.startTime ?? "",
+    );
 
     if (!signupClosesAt) {
-      setDetailsError("Choose a valid date.");
+      setDetailsError("Choose a valid event date and start time.");
       return;
     }
 
@@ -240,6 +245,11 @@ export function EventDetailsSection({
               </dd>
             </div>
           </dl>
+          {describeSeries(opportunity) ? (
+            <p className="mt-4 text-sm font-medium text-blue-700">
+              {describeSeries(opportunity)}
+            </p>
+          ) : null}
           {opportunity.description ? (
             <p className="mt-5 whitespace-pre-wrap text-sm leading-6 text-zinc-700">
               {opportunity.description}

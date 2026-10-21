@@ -2,7 +2,10 @@
 
 import { FirebaseError } from "firebase/app";
 import {
+  browserLocalPersistence,
+  browserSessionPersistence,
   createUserWithEmailAndPassword,
+  setPersistence,
   signInWithEmailAndPassword,
   updateProfile,
 } from "firebase/auth";
@@ -11,6 +14,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useState } from "react";
 
+import { sendVerification } from "@/features/accounts/verify-email/send-verification";
+import { ThirdPartyLoginButtons } from "@/features/accounts/third-party-login-buttons";
 import { auth, db } from "@/lib/firebase";
 
 type AuthMode = "login" | "signup";
@@ -52,6 +57,7 @@ export function AuthForm({ mode }: AuthFormProps) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -87,11 +93,26 @@ export function AuthForm({ mode }: AuthFormProps) {
           role: "student",
           createdAt: serverTimestamp(),
         });
-      } else {
-        await signInWithEmailAndPassword(auth, trimmedEmail, password);
+
+        try {
+          await sendVerification(credential.user);
+        } catch {
+          // The account exists either way; the verify page has a resend button.
+        }
+
+        router.replace("/verify-email");
+        return;
       }
 
-      router.replace("/dashboard");
+      const credential = await signInWithEmailAndPassword(
+        auth,
+        trimmedEmail,
+        password,
+      );
+
+      router.replace(
+        credential.user.emailVerified ? "/dashboard" : "/verify-email",
+      );
     } catch (caughtError) {
       setError(getFriendlyError(caughtError));
     } finally {
@@ -157,6 +178,18 @@ export function AuthForm({ mode }: AuthFormProps) {
             </div>
           </label>
 
+          {!isSignup ? (
+            <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-700">
+              <input
+                type="checkbox"
+                className="h-4 w-4 cursor-pointer rounded border-zinc-300 accent-blue-700"
+                checked={rememberMe}
+                onChange={(event) => setRememberMe(event.target.checked)}
+              />
+              Remember me?
+            </label>
+          ) : null}
+
           {error ? (
             <p
               className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
@@ -178,6 +211,8 @@ export function AuthForm({ mode }: AuthFormProps) {
                 : "Log in"}
           </button>
         </form>
+
+        <ThirdPartyLoginButtons onSignedIn={() => router.replace("/dashboard")} />
 
         <p className="mt-5 text-center text-sm text-zinc-600">
           {isSignup ? "Already have an account?" : "Need an account?"}{" "}

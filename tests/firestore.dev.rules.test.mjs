@@ -36,13 +36,13 @@ describe("firestore.dev.rules (open rules)", () => {
     await assertSucceeds(db.doc("users/u1").set({ role: "staff" }));
   });
 
-  test("signed-out visitor can get one event but not list or write it", async () => {
+  test("signed-out visitor can get and list events but not write them", async () => {
     await testEnv.withSecurityRulesDisabled(async (ctx) => {
       await ctx.firestore().doc("opportunities/o1").set({ title: "T" });
     });
     const db = testEnv.unauthenticatedContext().firestore();
     await assertSucceeds(db.doc("opportunities/o1").get());
-    await assertFails(db.collection("opportunities").get());
+    await assertSucceeds(db.collection("opportunities").get());
     await assertFails(db.doc("opportunities/o1").set({ title: "hack" }));
   });
 
