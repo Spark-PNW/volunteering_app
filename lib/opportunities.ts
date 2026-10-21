@@ -159,6 +159,27 @@ export function signupClosesAtForEventStart(date: string, startTime: string) {
   return new Date(eventStart.getTime() - 60_000);
 }
 
+// Returns the duration in hours between two "HH:MM" time strings, or null if
+// either value is missing or start is not before end.
+export function calculateHours(
+  startTime: string,
+  endTime: string,
+): number | null {
+  if (!startTime || !endTime) return null;
+  const [startH, startM] = startTime.split(":").map(Number);
+  const [endH, endM] = endTime.split(":").map(Number);
+  if (
+    !Number.isFinite(startH) ||
+    !Number.isFinite(startM) ||
+    !Number.isFinite(endH) ||
+    !Number.isFinite(endM)
+  ) {
+    return null;
+  }
+  const minutes = endH * 60 + endM - (startH * 60 + startM);
+  return minutes > 0 ? minutes / 60 : null;
+}
+
 export function formatHours(hours: number | null) {
   if (typeof hours !== "number" || Number.isNaN(hours)) {
     return "No hours";
