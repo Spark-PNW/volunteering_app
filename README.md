@@ -4,6 +4,22 @@ A website where students sign up for volunteering events and staff create and ma
 
 New here? Start with [Day 1](#day-1-your-first-pull-request). The three guides below are for after that.
 
+## Where to see the app
+
+- **Staging:** https://volunteering-app-staging.spark-internship-2026.workers.dev (updates within a couple of minutes of a merge to `main`)
+- **PR previews:** every pull request gets its own copy at `https://pr-<number>-volunteering-app-staging.spark-internship-2026.workers.dev`. To find yours, open your PR on GitHub, scroll to the checks at the bottom and click **Details** next to **preview**. The link is also posted on the PR after each push. If it's red, see [docs/MAKING_A_PULL_REQUEST.md](docs/MAKING_A_PULL_REQUEST.md).
+
+Staging and previews share one database, so use fake data with your team in the name (`[Events] Test event`).
+
+**Staff test accounts** (password for all of them: `localdev123`):
+
+| Email | Team |
+|---|---|
+| `staff-auth@example.com` | Auth |
+| `staff-student@example.com` | Student |
+| `staff-events@example.com` | Events |
+| `staff-staff@example.com` | Staff |
+
 ## Day 1: your first pull request
 
 This is the only thing you need to do on day 1. You will run the app, then add one file about yourself to the `roster/` folder (one file per person, so PRs never conflict), open a pull request, and watch it deploy to staging. You don't change the app.
