@@ -199,7 +199,7 @@ export function AuthForm({ mode }: AuthFormProps) {
                 <input
                   className="block h-11 w-full rounded-md border border-zinc-300 px-3 pr-10 text-base outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
                   autoComplete="off"
-                  minLength={6}
+                  minLength={8}
                   type={showConfirmPassword ? "text" : "password"}
                   value={confirmPassword}
                   onChange={(event) => setConfirmPassword(event.target.value)}
