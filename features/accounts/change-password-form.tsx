@@ -79,7 +79,7 @@ export function ChangePasswordForm() {
       return;
     }
 
-    if (newPassword.length < 6) {
+    if (newPassword.length < 8) {
       setError("New password must be at least 6 characters.");
       return;
     }
@@ -161,7 +161,7 @@ export function ChangePasswordForm() {
               <input
                 className={inputClass}
                 autoComplete="new-password"
-                minLength={6}
+                minLength={8}
                 type={showNew ? "text" : "password"}
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
@@ -185,7 +185,7 @@ export function ChangePasswordForm() {
               <input
                 className={inputClass}
                 autoComplete="new-password"
-                minLength={6}
+                minLength={8}
                 type={showConfirm ? "text" : "password"}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
