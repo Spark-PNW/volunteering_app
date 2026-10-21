@@ -80,6 +80,12 @@ export function OpportunitySignup({ opportunityId }: OpportunitySignupProps) {
           return;
         }
 
+        if (!user.emailVerified) {
+          setIsRedirecting(true);
+          router.replace("/verify-email");
+          return;
+        }
+
         const profileSnapshot = await getDoc(doc(db, "users", user.uid));
 
         if (!isMounted) {

@@ -2,7 +2,10 @@
 
 import { FirebaseError } from "firebase/app";
 import {
+  browserLocalPersistence,
+  browserSessionPersistence,
   createUserWithEmailAndPassword,
+  setPersistence,
   signInWithEmailAndPassword,
   updateProfile,
 } from "firebase/auth";
@@ -11,6 +14,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useState } from "react";
 
+import { sendVerification } from "@/features/accounts/verify-email/send-verification";
 import { ThirdPartyLoginButtons } from "@/features/accounts/third-party-login-buttons";
 import { auth, db } from "@/lib/firebase";
 
@@ -54,6 +58,7 @@ export function AuthForm({ mode }: AuthFormProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");  // confirmPassword is only checked on signup; it never reaches the network.
+  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -98,11 +103,26 @@ export function AuthForm({ mode }: AuthFormProps) {
           role: "student",
           createdAt: serverTimestamp(),
         });
-      } else {
-        await signInWithEmailAndPassword(auth, trimmedEmail, password);
+
+        try {
+          await sendVerification(credential.user);
+        } catch {
+          // The account exists either way; the verify page has a resend button.
+        }
+
+        router.replace("/verify-email");
+        return;
       }
 
-      router.replace("/dashboard");
+      const credential = await signInWithEmailAndPassword(
+        auth,
+        trimmedEmail,
+        password,
+      );
+
+      router.replace(
+        credential.user.emailVerified ? "/dashboard" : "/verify-email",
+      );
     } catch (caughtError) {
       setError(getFriendlyError(caughtError));
     } finally {
@@ -203,14 +223,15 @@ export function AuthForm({ mode }: AuthFormProps) {
           
           {/* "Forgot password?" is only relevant on the login form */}
           {!isSignup ? (
-            <div className="text-right">
-              <Link
-                className="text-sm font-medium text-blue-700 hover:text-blue-800"
-                href="/forgot-password"
-              >
-                Forgot password?
-              </Link>
-            </div>
+            <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-700">
+              <input
+                type="checkbox"
+                className="h-4 w-4 cursor-pointer rounded border-zinc-300 accent-blue-700"
+                checked={rememberMe}
+                onChange={(event) => setRememberMe(event.target.checked)}
+              />
+              Remember me?
+            </label>
           ) : null}
 
           {error ? (
