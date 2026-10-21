@@ -1,13 +1,26 @@
 "use client";
 
 import { FirebaseError } from "firebase/app";
-import { addDoc, collection, serverTimestamp } from "firebase/firestore";
+import {
+  collection,
+  doc,
+  serverTimestamp,
+  writeBatch,
+} from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useState } from "react";
 
 import { NavigationLinks } from "@/shared/navigation-links";
 import { auth, db } from "@/lib/firebase";
 import { calculateHours, formatHours, signupClosesAtForEventStart } from "@/lib/opportunities";
+
+import {
+  MAX_REPEAT_WEEKS,
+  occurrenceDates,
+  repeatUntilForWeeks,
+  type RepeatFrequency,
+} from "./recurrence";
+import { RepeatFields } from "./repeat-fields";
 
 function dateTimeToInputValue(date: Date | null) {
   if (!date) {
@@ -36,6 +49,8 @@ export function CreateOpportunityForm() {
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
   const [capacity, setCapacity] = useState("");
+  const [frequency, setFrequency] = useState<RepeatFrequency>("none");
+  const [repeatWeeks, setRepeatWeeks] = useState("");
   const [signupClosesAt, setSignupClosesAt] = useState("");
   const [hasCustomSignupClose, setHasCustomSignupClose] = useState(false);
   const [error, setError] = useState("");
@@ -83,6 +98,19 @@ export function CreateOpportunityForm() {
       return;
     }
 
+    const dates = occurrenceDates(
+      date,
+      frequency,
+      repeatUntilForWeeks(date, Number(repeatWeeks)),
+    );
+
+    if (!dates) {
+      setError(
+        `Enter a whole number of weeks to repeat, from 1 to ${MAX_REPEAT_WEEKS}.`,
+      );
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -93,25 +121,50 @@ export function CreateOpportunityForm() {
         return;
       }
 
+      // Each repeat closes signups the same amount of time before it starts.
+      const closeBeforeStartMs =
+        eventStart.getTime() - parsedSignupClosesAt.getTime();
       const hours = calculateHours(startTime, endTime);
+      const batch = writeBatch(db);
+      const seriesId =
+        dates.length > 1 ? doc(collection(db, "opportunities")).id : null;
+      const eventRefs = dates.map((eventDate, index) => {
+        const eventRef = doc(collection(db, "opportunities"));
 
-      const opportunity = await addDoc(collection(db, "opportunities"), {
-        title: trimmedTitle,
-        description: description.trim(),
-        location: location.trim(),
-        startTime,
-        endTime,
-        hours,
-        date,
-        capacity: parseInt(capacity) || null,
-        wrapUpSummary: "",
-        videoUrl: "",
-        createdBy: user.uid,
-        createdAt: serverTimestamp(),
-        signupClosesAt: parsedSignupClosesAt,
+        batch.set(eventRef, {
+          title: trimmedTitle,
+          description: description.trim(),
+          location: location.trim(),
+          startTime,
+          endTime,
+          hours,
+          date: eventDate,
+          capacity: parseInt(capacity) || null,
+          wrapUpSummary: "",
+          videoUrl: "",
+          createdBy: user.uid,
+          createdAt: serverTimestamp(),
+          signupClosesAt: new Date(
+            new Date(`${eventDate}T${startTime}`).getTime() -
+              closeBeforeStartMs,
+          ),
+          ...(seriesId
+            ? {
+                seriesId,
+                repeatFrequency: frequency,
+                repeatWeeks: Number(repeatWeeks),
+                seriesPosition: index + 1,
+                seriesCount: dates.length,
+              }
+            : {}),
+        });
+
+        return eventRef;
       });
 
-      router.push(`/staff/events/${opportunity.id}`);
+      await batch.commit();
+
+      router.push(`/staff/events/${eventRefs[0].id}`);
     } catch (caughtError) {
       setError(opportunityErrorMessage(caughtError));
     } finally {
@@ -233,6 +286,13 @@ export function CreateOpportunityForm() {
               />
             </label>
             </div>
+
+            <RepeatFields
+              frequency={frequency}
+              repeatWeeks={repeatWeeks}
+              onFrequencyChange={setFrequency}
+              onRepeatWeeksChange={setRepeatWeeks}
+            />
 
             <label className="block text-sm font-medium">
               Description

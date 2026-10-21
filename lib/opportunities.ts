@@ -11,6 +11,11 @@ export type Opportunity = {
   wrapUpSummary: string;
   videoUrl: string;
   createdBy: string;
+  // Only set on events created as a repeating series.
+  repeatFrequency: string;
+  repeatWeeks: number | null;
+  seriesPosition: number | null;
+  seriesCount: number | null;
 };
 
 export function opportunityFromData(
@@ -29,6 +34,12 @@ export function opportunityFromData(
       typeof data.wrapUpSummary === "string" ? data.wrapUpSummary : "",
     videoUrl: typeof data.videoUrl === "string" ? data.videoUrl : "",
     createdBy: typeof data.createdBy === "string" ? data.createdBy : "",
+    repeatFrequency:
+      typeof data.repeatFrequency === "string" ? data.repeatFrequency : "",
+    repeatWeeks: typeof data.repeatWeeks === "number" ? data.repeatWeeks : null,
+    seriesPosition:
+      typeof data.seriesPosition === "number" ? data.seriesPosition : null,
+    seriesCount: typeof data.seriesCount === "number" ? data.seriesCount : null,
   };
 }
 

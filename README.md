@@ -4,6 +4,22 @@ A website where students sign up for volunteering events and staff create and ma
 
 New here? Start with [Day 1](#day-1-your-first-pull-request). The three guides below are for after that.
 
+## Where to see the app
+
+- **Staging:** https://volunteering-app-staging.spark-internship-2026.workers.dev (updates within a couple of minutes of a merge to `main`)
+- **PR previews:** every pull request gets its own copy at `https://pr-<number>-volunteering-app-staging.spark-internship-2026.workers.dev`. To find yours, open your PR on GitHub, scroll to the checks at the bottom and click **Details** next to **preview**. The link is also posted on the PR after each push. If it's red, see [docs/MAKING_A_PULL_REQUEST.md](docs/MAKING_A_PULL_REQUEST.md).
+
+Staging and previews share one database, so use fake data with your team in the name (`[Events] Test event`).
+
+**Staff test accounts** (password for all of them: `localdev123`):
+
+| Email | Team |
+|---|---|
+| `staff-auth@example.com` | Auth |
+| `staff-student@example.com` | Student |
+| `staff-events@example.com` | Events |
+| `staff-staff@example.com` | Staff |
+
 ## Day 1: your first pull request
 
 This is the only thing you need to do on day 1. You will run the app, then add one file about yourself to the `roster/` folder (one file per person, so PRs never conflict), open a pull request, and watch it deploy to staging. You don't change the app.
@@ -44,12 +60,12 @@ In a second terminal, add the sample accounts:
 npm run seed:emulator
 ```
 
-Run `seed:emulator` once. The emulator starts empty, so the sample accounts don't exist until you do, and they come back on later runs because your data is saved.
+Run `seed:emulator` once. The emulator starts empty, so the sample accounts don't exist until you do, and they come back on later runs because your data is saved. It also marks the sample accounts' emails as verified, so if they get stuck on "Verify your email", run it again.
 
 Open http://localhost:3000. The staff account's password is `localdev123`.
 
 1. **Staff creates an event.** Log in as `staff-events@example.com`, click **Events**, then create a new event. Use your GitHub username in the title (for example `[yourname] Test event`) and pick a date in the future, since signups close once an event has passed.
-2. **Student signs up.** Log out, click **Sign up** to make your own student account (use your own name, any email like `you@example.com`, and any password), find your event and click **Sign up** on it. Take **screenshot 1**: the student view showing you are signed up.
+2. **Student signs up.** Log out, click **Sign up** to make your own student account (use your own name, any email like `you@example.com`, and any password). New accounts must verify their email. The emulator doesn't send real email, so find the line starting "To verify the email address" in the `npm run dev:local` terminal, open that link, then click **I've verified it**. Then find your event and click **Sign up** on it. Take **screenshot 1**: the student view showing you are signed up.
 3. **Staff sees the signup.** Log out, log back in as `staff-events@example.com`, and open your event from **Events**. Take **screenshot 2**: the event page showing your student account's name in the roster.
 
 Take screenshots with Mac `Cmd + Shift + 4` or Windows `Win + Shift + S`. Each one must show the app at localhost:3000. Press `Ctrl+C` once to stop the app.

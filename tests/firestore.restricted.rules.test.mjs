@@ -153,10 +153,10 @@ describe("3. only staff change events", () => {
     createdAt: "s",
     signupClosesAt: new Date("2099-02-03T00:00:00Z"),
   });
-  test("signed-in users read and list events; signed-out visitors open one by link only", async () => {
+  test("anyone can read and list events; signed-out visitors cannot write them", async () => {
     await assertSucceeds(authed("alice").collection("opportunities").get());
     await assertSucceeds(signedOut().doc("opportunities/opp-1").get());
-    await assertFails(signedOut().collection("opportunities").get());
+    await assertSucceeds(signedOut().collection("opportunities").get());
   });
   test("staff create, edit and delete events, with any new fields", async () => {
     await assertSucceeds(authed("staff").doc("opportunities/new").set({ ...newEvent(), anyNewField: { nested: true }, capacity: 10 }));

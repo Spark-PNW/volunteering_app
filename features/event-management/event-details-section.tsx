@@ -12,6 +12,8 @@ import {
   type Opportunity,
 } from "@/lib/opportunities";
 
+import { describeSeries } from "./recurrence";
+
 type EventDetailsSectionProps = {
   opportunity: Opportunity;
   // Called after the details are saved so the page can show the new values.
@@ -243,6 +245,11 @@ export function EventDetailsSection({
               </dd>
             </div>
           </dl>
+          {describeSeries(opportunity) ? (
+            <p className="mt-4 text-sm font-medium text-blue-700">
+              {describeSeries(opportunity)}
+            </p>
+          ) : null}
           {opportunity.description ? (
             <p className="mt-5 whitespace-pre-wrap text-sm leading-6 text-zinc-700">
               {opportunity.description}
