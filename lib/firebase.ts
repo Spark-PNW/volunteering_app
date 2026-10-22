@@ -2,6 +2,7 @@ import { initializeApp, getApp, getApps } from "firebase/app";
 import {
   browserLocalPersistence,
   browserPopupRedirectResolver,
+  browserSessionPersistence,
   connectAuthEmulator,
   getAuth,
   initializeAuth,
@@ -40,8 +41,9 @@ const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 
 // localStorage instead of getAuth's default IndexedDB: IndexedDB refuses to save
 // the user ("Database is closing/hidden") when the popup opens as a tab and hides
-// this page, which broke Google/Microsoft sign-in. initializeAuth throws if
-// called twice (hot reload), so fall back to getAuth.
+// this page, which broke Google/Microsoft sign-in. sessionStorage is listed too
+// so a login without "Remember me" (see auth-form.tsx) survives a page refresh.
+// initializeAuth throws if called twice (hot reload), so fall back to getAuth.
 function createAuth() {
   if (typeof window === "undefined") {
     return getAuth(app);
@@ -49,7 +51,7 @@ function createAuth() {
 
   try {
     return initializeAuth(app, {
-      persistence: browserLocalPersistence,
+      persistence: [browserLocalPersistence, browserSessionPersistence],
       popupRedirectResolver: browserPopupRedirectResolver,
     });
   } catch {

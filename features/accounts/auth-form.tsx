@@ -114,6 +114,13 @@ export function AuthForm({ mode }: AuthFormProps) {
         return;
       }
 
+      // "Remember me" keeps the login in localStorage so it survives closing
+      // the browser; otherwise sessionStorage, which ends when the tab closes.
+      await setPersistence(
+        auth,
+        rememberMe ? browserLocalPersistence : browserSessionPersistence,
+      );
+
       const credential = await signInWithEmailAndPassword(
         auth,
         trimmedEmail,
@@ -222,6 +229,18 @@ export function AuthForm({ mode }: AuthFormProps) {
           ) : null}
           
           {/* "Forgot password?" is only relevant on the login form */}
+          {!isSignup ? (
+            <div className="text-right">
+              <Link
+                className="text-sm font-medium text-blue-700 hover:text-blue-800"
+                href="/forgot-password"
+              >
+                Forgot password?
+              </Link>
+            </div>
+          ) : null}
+
+          {/* "Remember me" picks the login's persistence in handleSubmit */}
           {!isSignup ? (
             <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-700">
               <input
