@@ -19,7 +19,7 @@ The Firestore rules already allow step 2 (a user may create their own `users/{ui
 | `third-party-login.ts` | Sign-in with a popup, profile creation (`ensureUserProfile`), and friendly error messages |
 | `third-party-login-buttons.tsx` | The "or continue with" buttons and the error box. The `providers` list at the top controls which buttons show |
 | `auth-form.tsx`, `signup-page/inline-login-card.tsx` | The places the buttons appear (`/login`, `/signup`, and the event QR page) |
-| `../../lib/firebase.ts` | Creates `auth` with localStorage persistence (see Gotchas) |
+| `../../lib/firebase.ts` | Creates `auth` with localStorage persistence, plus sessionStorage for logins without "Remember me" (see Gotchas) |
 
 ## Try it on your laptop
 

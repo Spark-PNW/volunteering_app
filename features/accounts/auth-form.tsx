@@ -114,6 +114,13 @@ export function AuthForm({ mode }: AuthFormProps) {
         return;
       }
 
+      // "Remember me" keeps the login in localStorage so it survives closing
+      // the browser; otherwise sessionStorage, which ends when the tab closes.
+      await setPersistence(
+        auth,
+        rememberMe ? browserLocalPersistence : browserSessionPersistence,
+      );
+
       const credential = await signInWithEmailAndPassword(
         auth,
         trimmedEmail,
@@ -133,6 +140,13 @@ export function AuthForm({ mode }: AuthFormProps) {
   return (
     <main className="flex min-h-screen items-center justify-center bg-zinc-50 px-4 py-10 text-zinc-950">
       <section className="w-full max-w-sm rounded-lg border border-zinc-200 bg-white p-6 shadow-sm">
+        <Link
+          className="mb-4 inline-block text-sm font-medium text-zinc-600 hover:text-zinc-900"
+          href="/"
+        >
+          ← Back
+        </Link>
+
         <div className="mb-6">
           <p className="text-sm font-medium text-blue-700">Spark Volunteering</p>
           <h1 className="mt-2 text-2xl font-semibold">
@@ -222,6 +236,18 @@ export function AuthForm({ mode }: AuthFormProps) {
           ) : null}
           
           {/* "Forgot password?" is only relevant on the login form */}
+          {!isSignup ? (
+            <div className="text-right">
+              <Link
+                className="text-sm font-medium text-blue-700 hover:text-blue-800"
+                href="/forgot-password"
+              >
+                Forgot password?
+              </Link>
+            </div>
+          ) : null}
+
+          {/* "Remember me" picks the login's persistence in handleSubmit */}
           {!isSignup ? (
             <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-700">
               <input
