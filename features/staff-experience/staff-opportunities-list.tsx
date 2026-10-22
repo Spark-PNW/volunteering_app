@@ -121,6 +121,10 @@ export function StaffOpportunitiesList({
               ? []
               : [{ href: "/staff/events", label: "Events" }]),
             {
+              href: "/staff/events/drafts",
+              label: "Saved drafts",
+            },
+            {
               href: "/staff/events/new",
               label: "Create new event",
               variant: "primary",

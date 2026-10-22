@@ -1,7 +1,14 @@
 "use client";
 
 import { FirebaseError } from "firebase/app";
-import { addDoc, collection, serverTimestamp } from "firebase/firestore";
+import {
+  addDoc,
+  collection,
+  deleteDoc,
+  doc,
+  serverTimestamp,
+  setDoc,
+} from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useState } from "react";
 
@@ -17,17 +24,37 @@ function opportunityErrorMessage(error: unknown) {
   return "Could not create the event. Please try again.";
 }
 
-export function CreateOpportunityForm() {
+type InitialValues = {
+  title?: string;
+  description?: string;
+  location?: string;
+  date?: string;
+  startTime?: string;
+  endTime?: string;
+  capacity?: string;
+};
+
+type CreateOpportunityFormProps = {
+  initialValues?: InitialValues;
+  /** If set, "Save draft" overwrites this existing draft instead of creating a new one. */
+  draftId?: string;
+};
+
+export function CreateOpportunityForm({
+  initialValues = {},
+  draftId,
+}: CreateOpportunityFormProps) {
   const router = useRouter();
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [location, setLocation] = useState("");
-  const [date, setDate] = useState("");
-  const [startTime, setStartTime] = useState("");
-  const [endTime, setEndTime] = useState("");
-  const [capacity, setCapacity] = useState("");
+  const [title, setTitle] = useState(initialValues.title ?? "");
+  const [description, setDescription] = useState(initialValues.description ?? "");
+  const [location, setLocation] = useState(initialValues.location ?? "");
+  const [date, setDate] = useState(initialValues.date ?? "");
+  const [startTime, setStartTime] = useState(initialValues.startTime ?? "");
+  const [endTime, setEndTime] = useState(initialValues.endTime ?? "");
+  const [capacity, setCapacity] = useState(initialValues.capacity ?? "");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSavingDraft, setIsSavingDraft] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -82,11 +109,65 @@ export function CreateOpportunityForm() {
         signupClosesAt,
       });
 
+      // If this was created from a draft, delete that draft now.
+      if (draftId) {
+        await deleteDoc(doc(db, "drafts", draftId));
+      }
+
       router.push(`/staff/events/${opportunity.id}`);
     } catch (caughtError) {
       setError(opportunityErrorMessage(caughtError));
     } finally {
       setIsSubmitting(false);
+    }
+  }
+
+  async function handleSaveDraft() {
+    setError("");
+
+    const user = auth.currentUser;
+
+    if (!user) {
+      setError("Log in again before saving a draft.");
+      return;
+    }
+
+    setIsSavingDraft(true);
+
+    try {
+      const draftData = {
+        title: title.trim(),
+        description: description.trim(),
+        location: location.trim(),
+        startTime,
+        endTime,
+        date,
+        capacity: parseInt(capacity) || null,
+        createdBy: user.uid,
+        savedAt: serverTimestamp(),
+      };
+
+      if (draftId) {
+        // Overwrite the existing draft.
+        await setDoc(doc(db, "drafts", draftId), draftData);
+      } else {
+        await addDoc(collection(db, "drafts"), draftData);
+      }
+
+      router.push("/staff/events/drafts");
+    } catch (caughtError) {
+      if (
+        caughtError instanceof FirebaseError &&
+        caughtError.code === "permission-denied"
+      ) {
+        setError(
+          "Firebase denied this write. Confirm this account has role: staff and the latest rules are published.",
+        );
+      } else {
+        setError("Could not save the draft. Please try again.");
+      }
+    } finally {
+      setIsSavingDraft(false);
     }
   }
 
@@ -98,13 +179,18 @@ export function CreateOpportunityForm() {
             <p className="text-sm font-medium text-blue-700">
               Spark Volunteering
             </p>
-            <h1 className="mt-2 text-2xl font-semibold">Create Event</h1>
+            <h1 className="mt-2 text-2xl font-semibold">
+              {draftId ? "Edit Draft" : "Create Event"}
+            </h1>
           </div>
 
           <NavigationLinks
             items={[
               { href: "/dashboard", label: "Dashboard" },
               { href: "/staff/events", label: "Events" },
+              ...(draftId
+                ? [{ href: "/staff/events/drafts", label: "Saved Drafts" }]
+                : []),
             ]}
           />
         </div>
@@ -151,29 +237,29 @@ export function CreateOpportunityForm() {
                 />
               </label>
             </div>
-            
-            <div className="grid gap-4 sm:grid-cols-2">
-            <label className="block text-sm font-medium">
-              Date
-              <input
-                className="mt-1 block h-11 w-full rounded-md border border-zinc-300 px-3 text-base outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
-                type="date"
-                value={date}
-                onChange={(event) => setDate(event.target.value)}
-                required
-              />
-            </label>
 
-            <label className="block text-sm font-medium">
-              Capacity
-              <input
-                className="mt-1 block h-11 w-full rounded-md border border-zinc-300 px-3 text-base outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
-                type="number"
-                value={capacity}
-                onChange={(event) => setCapacity(event.target.value)}
-                required
-              />
-            </label>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="block text-sm font-medium">
+                Date
+                <input
+                  className="mt-1 block h-11 w-full rounded-md border border-zinc-300 px-3 text-base outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                  type="date"
+                  value={date}
+                  onChange={(event) => setDate(event.target.value)}
+                  required
+                />
+              </label>
+
+              <label className="block text-sm font-medium">
+                Capacity
+                <input
+                  className="mt-1 block h-11 w-full rounded-md border border-zinc-300 px-3 text-base outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                  type="number"
+                  value={capacity}
+                  onChange={(event) => setCapacity(event.target.value)}
+                  required
+                />
+              </label>
             </div>
 
             <label className="block text-sm font-medium">
@@ -204,13 +290,23 @@ export function CreateOpportunityForm() {
             </p>
           ) : null}
 
-          <button
-            className="mt-5 flex h-11 w-full items-center justify-center rounded-md bg-blue-700 px-4 text-sm font-semibold text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:bg-zinc-400"
-            disabled={isSubmitting}
-            type="submit"
-          >
-            {isSubmitting ? "Creating" : "Create event"}
-          </button>
+          <div className="mt-5 flex gap-3">
+            <button
+              className="flex h-11 flex-1 items-center justify-center rounded-md bg-blue-700 px-4 text-sm font-semibold text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:bg-zinc-400"
+              disabled={isSubmitting || isSavingDraft}
+              type="submit"
+            >
+              {isSubmitting ? "Creating…" : "Create event"}
+            </button>
+            <button
+              className="flex h-11 flex-1 items-center justify-center rounded-md border border-zinc-300 bg-white px-4 text-sm font-semibold text-zinc-900 transition hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={isSubmitting || isSavingDraft}
+              type="button"
+              onClick={handleSaveDraft}
+            >
+              {isSavingDraft ? "Saving…" : "Save draft"}
+            </button>
+          </div>
         </form>
       </section>
     </main>
